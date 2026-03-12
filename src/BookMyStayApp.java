@@ -2,26 +2,45 @@ import java.util.*;
 
 /**
  * ============================================================
- * CLASS - Reservation
+ * CUSTOM EXCEPTION - InvalidBookingException
  * ============================================================
  */
 
-class Reservation {
+class InvalidBookingException extends Exception {
 
-    String guestName;
-    String roomType;
-    String roomId;
+    public InvalidBookingException(String message) {
+        super(message);
+    }
+}
 
-    public Reservation(String guestName, String roomType, String roomId) {
-        this.guestName = guestName;
-        this.roomType = roomType;
-        this.roomId = roomId;
+
+/**
+ * ============================================================
+ * CLASS - RoomInventory
+ * ============================================================
+ */
+
+class RoomInventory {
+
+    private Map<String, Integer> availability;
+
+    public RoomInventory() {
+        availability = new HashMap<>();
+        availability.put("Single", 2);
+        availability.put("Double", 1);
+        availability.put("Suite", 1);
     }
 
-    public void display() {
-        System.out.println("Guest: " + guestName +
-                " | Room Type: " + roomType +
-                " | Room ID: " + roomId);
+    public int getAvailability(String type) {
+        return availability.getOrDefault(type, -1);
+    }
+
+    public void decrease(String type) {
+        availability.put(type, availability.get(type) - 1);
+    }
+
+    public Set<String> getRoomTypes() {
+        return availability.keySet();
     }
 }
 
@@ -30,46 +49,54 @@ class Reservation {
  * ============================================================
  * MAIN CLASS - BookMyStayApp
  * ============================================================
- * UC8: Booking History + Reporting
+ * UC9: Validation + Exception Handling
  */
 
 public class BookMyStayApp {
 
+    public static void validateBooking(String roomType,
+                                       RoomInventory inventory)
+            throws InvalidBookingException {
+
+        // Validate room type
+        if (!inventory.getRoomTypes().contains(roomType)) {
+            throw new InvalidBookingException("Invalid room type selected.");
+        }
+
+        // Validate availability
+        if (inventory.getAvailability(roomType) <= 0) {
+            throw new InvalidBookingException("No rooms available for "
+                    + roomType);
+        }
+    }
+
     public static void main(String[] args) {
 
-        // Booking history list (chronological order)
-        List<Reservation> bookingHistory = new ArrayList<>();
+        RoomInventory inventory = new RoomInventory();
 
-        // Simulated confirmed bookings (from UC6)
-        bookingHistory.add(new Reservation("Aarav", "Single", "S45"));
-        bookingHistory.add(new Reservation("Diya", "Double", "D21"));
-        bookingHistory.add(new Reservation("Rohan", "Suite", "S89"));
+        // Sample inputs (valid + invalid)
+        String[] bookingInputs = {"Single", "Suite", "Deluxe", "Single"};
 
-        System.out.println("===== BOOKING HISTORY =====\n");
+        System.out.println("Processing Bookings...\n");
 
-        // Display history
-        for (Reservation r : bookingHistory) {
-            r.display();
+        for (String roomType : bookingInputs) {
+
+            try {
+
+                validateBooking(roomType, inventory);
+
+                inventory.decrease(roomType);
+
+                System.out.println("Booking confirmed for "
+                        + roomType);
+
+            } catch (InvalidBookingException e) {
+
+                System.out.println("Booking failed: "
+                        + e.getMessage());
+            }
         }
 
-        // ==========================
-        // REPORT SECTION
-        // ==========================
-
-        System.out.println("\n===== BOOKING SUMMARY REPORT =====\n");
-
-        Map<String, Integer> summary = new HashMap<>();
-
-        for (Reservation r : bookingHistory) {
-            summary.put(r.roomType,
-                    summary.getOrDefault(r.roomType, 0) + 1);
-        }
-
-        for (String type : summary.keySet()) {
-            System.out.println(type + " Rooms Booked: "
-                    + summary.get(type));
-        }
-
-        System.out.println("\nReport generated successfully.");
+        System.out.println("\nSystem running safely.");
     }
 }
