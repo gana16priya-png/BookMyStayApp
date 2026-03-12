@@ -1,62 +1,25 @@
-import java.util.HashMap;
-import java.util.Map;
+import java.util.LinkedList;
+import java.util.Queue;
 
 /**
  * ============================================================
- * CLASS - Room (Domain Model)
+ * CLASS - Reservation
  * ============================================================
- * Stores room details like price, beds, size.
+ * Represents guest booking request
  */
 
-class Room {
+class Reservation {
 
-    String type;
-    int beds;
-    int size;
-    double price;
+    String guestName;
+    String roomType;
 
-    public Room(String type, int beds, int size, double price) {
-        this.type = type;
-        this.beds = beds;
-        this.size = size;
-        this.price = price;
+    public Reservation(String guestName, String roomType) {
+        this.guestName = guestName;
+        this.roomType = roomType;
     }
 
-    public void displayDetails(int availableRooms) {
-
-        System.out.println(type + " Room:");
-        System.out.println("Beds: " + beds);
-        System.out.println("Size: " + size + " sqft");
-        System.out.println("Price per night: " + price);
-        System.out.println("Available Rooms: " + availableRooms);
-        System.out.println();
-    }
-}
-
-
-/**
- * ============================================================
- * CLASS - RoomInventory (UC3 reused)
- * ============================================================
- */
-
-class RoomInventory {
-
-    private HashMap<String, Integer> roomAvailability;
-
-    public RoomInventory() {
-        roomAvailability = new HashMap<>();
-        initializeInventory();
-    }
-
-    private void initializeInventory() {
-        roomAvailability.put("Single", 5);
-        roomAvailability.put("Double", 3);
-        roomAvailability.put("Suite", 2);
-    }
-
-    public Map<String, Integer> getRoomAvailability() {
-        return roomAvailability;
+    public void display() {
+        System.out.println("Guest: " + guestName + " | Room Type: " + roomType);
     }
 }
 
@@ -65,32 +28,27 @@ class RoomInventory {
  * ============================================================
  * MAIN CLASS - BookMyStayApp
  * ============================================================
- * UC4: Room Search (Read-Only Access)
+ * UC5: Booking Request Queue using FIFO
  */
 
 public class BookMyStayApp {
 
     public static void main(String[] args) {
 
-        RoomInventory inventory = new RoomInventory();
+        // Create Queue
+        Queue<Reservation> bookingQueue = new LinkedList<>();
 
-        // Domain model objects
-        Room single = new Room("Single", 1, 250, 1500.0);
-        Room dbl = new Room("Double", 2, 400, 2500.0);
-        Room suite = new Room("Suite", 3, 750, 5000.0);
+        // Add booking requests (arrival order)
+        bookingQueue.add(new Reservation("Aarav", "Single"));
+        bookingQueue.add(new Reservation("Diya", "Double"));
+        bookingQueue.add(new Reservation("Rohan", "Suite"));
+        bookingQueue.add(new Reservation("Meera", "Single"));
 
-        System.out.println("Available Rooms (Search Result)\n");
+        System.out.println("Booking Requests in Queue (FIFO Order):\n");
 
-        // READ-ONLY SEARCH LOGIC
-        Map<String, Integer> availability = inventory.getRoomAvailability();
-
-        if (availability.get("Single") > 0)
-            single.displayDetails(availability.get("Single"));
-
-        if (availability.get("Double") > 0)
-            dbl.displayDetails(availability.get("Double"));
-
-        if (availability.get("Suite") > 0)
-            suite.displayDetails(availability.get("Suite"));
+        // Display Queue (NO PROCESSING)
+        for (Reservation r : bookingQueue) {
+            r.display();
+        }
     }
 }
