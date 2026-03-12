@@ -1,32 +1,41 @@
+import java.io.*;
 import java.util.*;
 
 /**
  * ============================================================
- * CLASS - Reservation
+ * CLASS - Reservation (Serializable)
  * ============================================================
  */
 
-class Reservation {
+class Reservation implements Serializable {
 
     String guestName;
     String roomType;
+    String roomId;
 
-    public Reservation(String guestName, String roomType) {
+    public Reservation(String guestName, String roomType, String roomId) {
         this.guestName = guestName;
         this.roomType = roomType;
+        this.roomId = roomId;
+    }
+
+    public void display() {
+        System.out.println("Guest: " + guestName +
+                " | Room: " + roomType +
+                " | ID: " + roomId);
     }
 }
 
 
 /**
  * ============================================================
- * CLASS - RoomInventory (Thread Safe)
+ * CLASS - RoomInventory (Serializable)
  * ============================================================
  */
 
-class RoomInventory {
+class RoomInventory implements Serializable {
 
-    private Map<String, Integer> availability = new HashMap<>();
+    Map<String, Integer> availability = new HashMap<>();
 
     public RoomInventory() {
         availability.put("Single", 2);
@@ -34,19 +43,8 @@ class RoomInventory {
         availability.put("Suite", 1);
     }
 
-    // Critical Section (Thread Safe)
-    public synchronized boolean allocate(String type) {
-
-        if (availability.getOrDefault(type, 0) > 0) {
-
-            availability.put(type, availability.get(type) - 1);
-            return true;
-        }
-        return false;
-    }
-
     public void display() {
-        System.out.println("\nFinal Inventory:");
+        System.out.println("\nInventory:");
         for (String type : availability.keySet()) {
             System.out.println(type + ": " + availability.get(type));
         }
@@ -56,90 +54,77 @@ class RoomInventory {
 
 /**
  * ============================================================
- * CLASS - BookingProcessor (Thread)
- * ============================================================
- */
-
-class BookingProcessor extends Thread {
-
-    private Queue<Reservation> queue;
-    private RoomInventory inventory;
-
-    public BookingProcessor(Queue<Reservation> queue,
-                            RoomInventory inventory) {
-
-        this.queue = queue;
-        this.inventory = inventory;
-    }
-
-    public void run() {
-
-        while (true) {
-
-            Reservation r;
-
-            synchronized (queue) {
-
-                if (queue.isEmpty())
-                    break;
-
-                r = queue.poll();
-            }
-
-            if (inventory.allocate(r.roomType)) {
-
-                System.out.println(Thread.currentThread().getName()
-                        + " confirmed booking for "
-                        + r.guestName + " (" + r.roomType + ")");
-
-            } else {
-
-                System.out.println(Thread.currentThread().getName()
-                        + " failed booking for "
-                        + r.guestName);
-            }
-        }
-    }
-}
-
-
-/**
- * ============================================================
  * MAIN CLASS - BookMyStayApp
  * ============================================================
- * UC11: Concurrent Booking Simulation
+ * UC12: Persistence + Recovery
  */
 
 public class BookMyStayApp {
 
+    static final String FILE_NAME = "system_state.dat";
+
+    public static void saveState(List<Reservation> bookings,
+                                 RoomInventory inventory) {
+
+        try (ObjectOutputStream out =
+                     new ObjectOutputStream(
+                             new FileOutputStream(FILE_NAME))) {
+
+            out.writeObject(bookings);
+            out.writeObject(inventory);
+
+            System.out.println("System state saved successfully.");
+
+        } catch (IOException e) {
+
+            System.out.println("Error saving system state.");
+        }
+    }
+
+    public static void loadState(List<Reservation> bookings,
+                                 RoomInventory inventory) {
+
+        try (ObjectInputStream in =
+                     new ObjectInputStream(
+                             new FileInputStream(FILE_NAME))) {
+
+            bookings.clear();
+            bookings.addAll((List<Reservation>) in.readObject());
+
+            RoomInventory restored =
+                    (RoomInventory) in.readObject();
+
+            inventory.availability = restored.availability;
+
+            System.out.println("System state restored successfully.");
+
+        } catch (Exception e) {
+
+            System.out.println("No previous state found. Starting fresh.");
+        }
+    }
+
     public static void main(String[] args) {
 
-        Queue<Reservation> bookingQueue = new LinkedList<>();
-
-        bookingQueue.add(new Reservation("Aarav", "Single"));
-        bookingQueue.add(new Reservation("Diya", "Double"));
-        bookingQueue.add(new Reservation("Rohan", "Suite"));
-        bookingQueue.add(new Reservation("Meera", "Single"));
-
+        List<Reservation> bookingHistory = new ArrayList<>();
         RoomInventory inventory = new RoomInventory();
 
-        // Multiple threads
-        BookingProcessor t1 =
-                new BookingProcessor(bookingQueue, inventory);
+        // Load previous state
+        loadState(bookingHistory, inventory);
 
-        BookingProcessor t2 =
-                new BookingProcessor(bookingQueue, inventory);
+        // Add sample booking
+        bookingHistory.add(new Reservation("Aarav",
+                "Single", "S45"));
 
-        t1.start();
-        t2.start();
-
-        try {
-            t1.join();
-            t2.join();
-        } catch (InterruptedException e) {
-            e.printStackTrace();
+        // Display current state
+        System.out.println("\n===== CURRENT BOOKINGS =====\n");
+        for (Reservation r : bookingHistory) {
+            r.display();
         }
 
         inventory.display();
+
+        // Save before shutdown
+        saveState(bookingHistory, inventory);
     }
 }
